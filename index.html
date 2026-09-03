@@ -296,6 +296,7 @@ const spinStatus = document.getElementById('spin-status');
 const spinResults = document.querySelector('#spin-results span');
 const fortuneStorageKey = 'dasha-fortune-wheel-results';
 let fortuneState = { spins: [], rotation: 0 };
+let fortuneIsSpinning = false;
 try { fortuneState = JSON.parse(localStorage.getItem(fortuneStorageKey) || '{"spins":[],"rotation":0}'); } catch (error) {}
 function targetRotationForResult(result) {
   return { 1: 0, 2: 270, 3: 180, 4: 90 }[result];
@@ -314,15 +315,21 @@ function renderFortuneState() {
   if (fortuneState.spins.length >= 2) { spinButton.disabled = true; fortuneWheel.disabled = true; spinButton.textContent = 'Попытки использованы'; }
 }
 function spinFortuneWheel() {
-  if (fortuneState.spins.length >= 2) return;
+  if (fortuneState.spins.length >= 2 || fortuneIsSpinning) return;
+  fortuneIsSpinning = true;
   const result = Math.floor(Math.random() * 4) + 1;
-  fortuneState.spins.push(result);
   const target = targetRotationForResult(result);
   const current = ((fortuneState.rotation % 360) + 360) % 360;
   fortuneState.rotation += 1440 + (target - current + 360) % 360;
+  spinButton.disabled = true;
+  spinButton.textContent = 'Колесо вращается...';
   fortuneWheel.style.transform = `rotate(${fortuneState.rotation}deg)`;
-  localStorage.setItem(fortuneStorageKey, JSON.stringify(fortuneState));
-  renderFortuneState();
+  fortuneWheel.addEventListener('transitionend', () => {
+    fortuneState.spins.push(result);
+    localStorage.setItem(fortuneStorageKey, JSON.stringify(fortuneState));
+    fortuneIsSpinning = false;
+    renderFortuneState();
+  }, { once: true });
 }
 spinButton.addEventListener('click', spinFortuneWheel);
 fortuneWheel.addEventListener('click', spinFortuneWheel);
