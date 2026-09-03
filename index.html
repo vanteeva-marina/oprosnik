@@ -297,8 +297,17 @@ const spinResults = document.querySelector('#spin-results span');
 const fortuneStorageKey = 'dasha-fortune-wheel-results';
 let fortuneState = { spins: [], rotation: 0 };
 try { fortuneState = JSON.parse(localStorage.getItem(fortuneStorageKey) || '{"spins":[],"rotation":0}'); } catch (error) {}
+function targetRotationForResult(result) {
+  return { 1: 0, 2: 270, 3: 180, 4: 90 }[result];
+}
 function renderFortuneState() {
   const remaining = Math.max(0, 2 - fortuneState.spins.length);
+  if (fortuneState.spins.length) {
+    const target = targetRotationForResult(fortuneState.spins[fortuneState.spins.length - 1]);
+    const current = ((fortuneState.rotation % 360) + 360) % 360;
+    fortuneState.rotation += (target - current + 360) % 360;
+    localStorage.setItem(fortuneStorageKey, JSON.stringify(fortuneState));
+  }
   fortuneWheel.style.transform = `rotate(${fortuneState.rotation || 0}deg)`;
   spinStatus.textContent = `Осталось вращений: ${remaining}`;
   spinResults.textContent = fortuneState.spins.length ? fortuneState.spins.join(' · ') : 'пока нет';
@@ -308,7 +317,9 @@ function spinFortuneWheel() {
   if (fortuneState.spins.length >= 2) return;
   const result = Math.floor(Math.random() * 4) + 1;
   fortuneState.spins.push(result);
-  fortuneState.rotation += 1440 + Math.floor(Math.random() * 360);
+  const target = targetRotationForResult(result);
+  const current = ((fortuneState.rotation % 360) + 360) % 360;
+  fortuneState.rotation += 1440 + (target - current + 360) % 360;
   fortuneWheel.style.transform = `rotate(${fortuneState.rotation}deg)`;
   localStorage.setItem(fortuneStorageKey, JSON.stringify(fortuneState));
   renderFortuneState();
