@@ -82,6 +82,7 @@ button { display: block; margin: 30px auto 0; padding: 15px 24px; border: 0; bor
 button:hover { transform: translateY(-2px); background: #38574d; }
 .success { display: none; margin-top: 17px; font-size: 14px; font-weight: 700; }
 .success.visible { display: block; }
+.telegram-status { min-height: 20px; margin-top: 12px; color: #90A63F; font-size: 13px; }
 @media (max-width: 600px) { .wrapper { padding: 18px 15px 52px; } .topbar { margin-bottom: 24px; } .hero { min-height: 480px; } .hero:after { right: 8%; top: 9%; font-size: 38px; } .section { margin-top: 57px; padding: 0 4px; } .question { padding: 23px 0 27px; } .final { margin-top: 70px; } }
 .section:nth-of-type(1) h2 { color: #90A63F; }
 .section:nth-of-type(1) h2 { color: #90A63F; }
@@ -230,7 +231,7 @@ button:hover { transform: translateY(-2px); background: #38574d; }
       <p class="spin-status" id="spin-status">Осталось вращений: 2</p>
       <p class="spin-results" id="spin-results">Выпавшие цифры: <span>пока нет</span></p>
     </section>
-    <section class="final"><p class="kicker">Напоследок</p><p class="final-title">Я так счастлива, что ты существуешь! Я так сильно тебя люблю!</p><p class="final-sub">Сделано с любовью, специально для тебя</p><button type="submit">Закончить анкету</button><div class="success" id="success">Твои ответы сохранены на этой маленькой страничке ♡</div></section>
+    <section class="final"><p class="kicker">Напоследок</p><p class="final-title">Я так счастлива, что ты существуешь! Я так сильно тебя люблю!</p><p class="final-sub">Сделано с любовью, специально для тебя</p><button type="submit">Закончить анкету</button><div class="success" id="success">Твои ответы сохранены на этой маленькой страничке ♡</div><div class="telegram-status" id="telegram-status" aria-live="polite"></div></section>
   </form>
 </main>
 <script>
@@ -238,7 +239,9 @@ const form = document.getElementById('friend-form');
 const fields = [...form.querySelectorAll('input, textarea')];
 const answered = document.getElementById('answered');
 const progressBar = document.getElementById('progress-bar');
+const telegramStatus = document.getElementById('telegram-status');
 const storageKey = 'dasha-best-friend-questionnaire';
+const telegramEndpoint = 'https://script.google.com/macros/s/AKfycbzXEenkDr9TvwSTeZN5_I3E32mUNiZ8nSAA-U876_O2dOyeK0EAU3e_CF-uOzl8xBuy/exec';
 
 function updateProgress() {
   const count = fields.filter(field => field.value.trim()).length;
@@ -262,7 +265,30 @@ form.addEventListener('submit', event => {
   saveAnswers();
   document.getElementById('success').classList.add('visible');
   document.querySelector('.final button').textContent = 'С любовью сохранено';
+  sendResultsToTelegram();
 });
+
+async function sendResultsToTelegram() {
+  if (telegramEndpoint.includes('PASTE_')) {
+    telegramStatus.textContent = 'Telegram пока не подключен: укажите URL Apps Script.';
+    return;
+  }
+  const labels = Object.fromEntries(fields.map(field => [field.name, field.previousElementSibling.textContent]));
+  const answers = Object.fromEntries(fields.map(field => [field.name, field.value.trim()]));
+  const fortuneData = JSON.parse(localStorage.getItem(fortuneStorageKey) || '{"spins":[]}');
+  telegramStatus.textContent = 'Отправляем ответы в Telegram...';
+  try {
+    await fetch(telegramEndpoint, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ answers, labels, fortuneResults: fortuneData.spins || [] })
+    });
+    telegramStatus.textContent = 'Ответы отправлены в Telegram ♡';
+  } catch (error) {
+    telegramStatus.textContent = 'Не удалось отправить ответы. Они сохранены в этом браузере.';
+  }
+}
 
 const fortuneWheel = document.getElementById('fortune-wheel');
 const spinButton = document.getElementById('spin-button');
@@ -273,6 +299,7 @@ let fortuneState = { spins: [], rotation: 0 };
 try { fortuneState = JSON.parse(localStorage.getItem(fortuneStorageKey) || '{"spins":[],"rotation":0}'); } catch (error) {}
 function renderFortuneState() {
   const remaining = Math.max(0, 2 - fortuneState.spins.length);
+  fortuneWheel.style.transform = `rotate(${fortuneState.rotation || 0}deg)`;
   spinStatus.textContent = `Осталось вращений: ${remaining}`;
   spinResults.textContent = fortuneState.spins.length ? fortuneState.spins.join(' · ') : 'пока нет';
   if (fortuneState.spins.length >= 2) { spinButton.disabled = true; fortuneWheel.disabled = true; spinButton.textContent = 'Попытки использованы'; }
