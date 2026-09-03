@@ -324,12 +324,17 @@ function spinFortuneWheel() {
   spinButton.disabled = true;
   spinButton.textContent = 'Колесо вращается...';
   fortuneWheel.style.transform = `rotate(${fortuneState.rotation}deg)`;
-  fortuneWheel.addEventListener('transitionend', () => {
+  let spinFinished = false;
+  const finishSpin = () => {
+    if (spinFinished) return;
+    spinFinished = true;
     fortuneState.spins.push(result);
     localStorage.setItem(fortuneStorageKey, JSON.stringify(fortuneState));
     fortuneIsSpinning = false;
     renderFortuneState();
-  }, { once: true });
+  };
+  fortuneWheel.addEventListener('transitionend', finishSpin, { once: true });
+  setTimeout(finishSpin, 3400);
 }
 spinButton.addEventListener('click', spinFortuneWheel);
 fortuneWheel.addEventListener('click', spinFortuneWheel);
